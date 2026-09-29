@@ -172,7 +172,7 @@ MAJEL grew out of a personal experiment with the following cast:
 
 **Bailey is not MAJEL.** Bailey is a personal reference implementation that runs *on top of* MAJEL. MAJEL itself is meant to stay generic, so anyone can build their own chief-of-staff agent and specialists instead of receiving Bailey.
 
-This repository does not contain, and will not contain, Bailey's memories, credentials, personality prompts, private configuration, or other personal information.
+This repository does not contain, and will not contain, Bailey's memories, credentials, personality prompts, private configuration, or other personal information. Those materials are not covered by MAJEL's [license](#license).
 
 ## Project Status
 
@@ -190,6 +190,7 @@ It does **not** yet contain a working control plane, routing layer, policy engin
 
 ```text
 MAJEL/
+├── LICENSE                 # Apache License 2.0
 ├── README.md
 ├── compose.yaml            # Placeholder; no services defined yet
 ├── docs/
@@ -263,4 +264,6 @@ Please open an issue to start a discussion before submitting large changes. Cont
 
 ## License
 
-Licensing is **to be determined**. Until a license is added, no license is granted to use, copy, or distribute this code.
+MAJEL is licensed under the [Apache License 2.0](LICENSE).
+
+The license covers the contents of this repository only. It does **not** extend to the Bailey reference implementation's persona assets, branding, private configuration, credentials, memories, or any other material that is not part of this repository.
