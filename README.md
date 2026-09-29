@@ -199,6 +199,7 @@ MAJEL/
 ├── compose.yaml            # Placeholder; no services defined yet
 ├── docs/
 │   ├── assets/             # Project logo and other documentation images
+│   ├── brand/              # Brand standard: name, logo, colour, and type
 │   ├── architecture/       # Architecture documentation (index only for now)
 │   ├── experiments/        # Experiment write-ups and template guidance
 │   └── decisions/          # Architecture Decision Records (ADRs)

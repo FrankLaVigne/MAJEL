@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="520" viewBox="0 0 880 520" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>MAJEL colour palette</title>
+  <rect width="880" height="520" rx="12" fill="#020610"/>
+
+  <!-- Core -->
+  <text x="32" y="44" fill="#BDCFD8" font-size="14" font-weight="600" letter-spacing="3">CORE</text>
+  <g font-size="13">
+    <rect x="32" y="60" width="152" height="84" rx="8" fill="#020610" stroke="#BDCFD8" stroke-opacity="0.35"/>
+    <text x="32" y="166" fill="#FDFBF5" font-weight="600">Deep Space</text>
+    <text x="32" y="184" fill="#7F93A8">#020610</text>
+
+    <rect x="200" y="60" width="152" height="84" rx="8" fill="#0F243B"/>
+    <text x="200" y="166" fill="#FDFBF5" font-weight="600">Orbit Navy</text>
+    <text x="200" y="184" fill="#7F93A8">#0F243B</text>
+
+    <rect x="368" y="60" width="152" height="84" rx="8" fill="#7F93A8"/>
+    <text x="368" y="166" fill="#FDFBF5" font-weight="600">Steel</text>
+    <text x="368" y="184" fill="#7F93A8">#7F93A8</text>
+
+    <rect x="536" y="60" width="152" height="84" rx="8" fill="#BDCFD8"/>
+    <text x="536" y="166" fill="#FDFBF5" font-weight="600">Chrome</text>
+    <text x="536" y="184" fill="#7F93A8">#BDCFD8</text>
+
+    <rect x="704" y="60" width="144" height="84" rx="8" fill="#FDFBF5"/>
+    <text x="704" y="166" fill="#FDFBF5" font-weight="600">Starlight</text>
+    <text x="704" y="184" fill="#7F93A8">#FDFBF5</text>
+  </g>
+
+  <!-- Accents -->
+  <text x="32" y="228" fill="#BDCFD8" font-size="14" font-weight="600" letter-spacing="3">ACCENTS</text>
+  <g font-size="13">
+    <rect x="32" y="244" width="152" height="84" rx="8" fill="#4D86B5"/>
+    <text x="32" y="350" fill="#FDFBF5" font-weight="600">Junction Blue</text>
+    <text x="32" y="368" fill="#7F93A8">#4D86B5</text>
+
+    <rect x="200" y="244" width="152" height="84" rx="8" fill="#62D2F0"/>
+    <text x="200" y="350" fill="#FDFBF5" font-weight="600">Ion Cyan</text>
+    <text x="200" y="368" fill="#7F93A8">#62D2F0</text>
+
+    <rect x="368" y="244" width="152" height="84" rx="8" fill="#D5A067"/>
+    <text x="368" y="350" fill="#FDFBF5" font-weight="600">Execution Gold</text>
+    <text x="368" y="368" fill="#7F93A8">#D5A067</text>
+
+    <rect x="536" y="244" width="152" height="84" rx="8" fill="#AE7442"/>
+    <text x="536" y="350" fill="#FDFBF5" font-weight="600">Ember</text>
+    <text x="536" y="368" fill="#7F93A8">#AE7442</text>
+  </g>
+
+  <!-- Light surfaces -->
+  <text x="32" y="412" fill="#BDCFD8" font-size="14" font-weight="600" letter-spacing="3">LIGHT SURFACES</text>
+  <g font-size="13">
+    <rect x="32" y="428" width="152" height="40" rx="8" fill="#F4F6F9"/>
+    <text x="32" y="490" fill="#FDFBF5" font-weight="600">Mist</text>
+    <text x="32" y="508" fill="#7F93A8">#F4F6F9</text>
+
+    <rect x="200" y="428" width="152" height="40" rx="8" fill="#2F6A99"/>
+    <text x="200" y="490" fill="#FDFBF5" font-weight="600">Junction Blue Deep</text>
+    <text x="200" y="508" fill="#7F93A8">#2F6A99</text>
+
+    <rect x="368" y="428" width="152" height="40" rx="8" fill="#8A5A2E"/>
+    <text x="368" y="490" fill="#FDFBF5" font-weight="600">Execution Gold Deep</text>
+    <text x="368" y="508" fill="#7F93A8">#8A5A2E</text>
+  </g>
+</svg>
