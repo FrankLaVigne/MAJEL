@@ -1,0 +1,152 @@
+# =====================================================================
+# MAJEL .gitignore
+# Security first: credentials, secrets, and agent state must never be
+# committed. If you need to commit an example config, name it with an
+# .example suffix and keep it free of real values.
+# =====================================================================
+
+# --- Environment files ------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+
+# --- Secrets and credentials ------------------------------------------
+secrets/
+.secrets/
+credentials/
+*.secret
+*.secrets
+*secret*.json
+*secret*.yaml
+*secret*.yml
+*credential*.json
+*credentials*.json
+*credentials*.yaml
+*credentials*.yml
+*token*.json
+client_secret*.json
+service-account*.json
+*.keytab
+.netrc
+.npmrc
+.pypirc
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.csr
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.gpg
+*.asc
+
+# --- Agent state and local persistent data ----------------------------
+# Agent memories, identity material, conversation history, and runtime
+# state are private and belong outside version control.
+state/
+.state/
+agent-state/
+agent_state/
+memory/
+memories/
+data/
+.data/
+volumes/
+runtime/
+.runtime/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Model weights and caches
+models/
+*.gguf
+*.safetensors
+*.onnx
+*.bin
+.cache/
+
+# --- Logs ------------------------------------------------------------
+logs/
+*.log
+*.log.*
+
+# --- Python -----------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+pip-wheel-metadata/
+.installed.cfg
+MANIFEST
+
+# Testing / coverage / type checking
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# --- Virtual environments ---------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.python-version
+__pypackages__/
+.pdm-python
+
+# --- Docker -----------------------------------------------------------
+# Local overrides frequently contain machine-specific paths or secrets.
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yaml
+docker-compose.override.yml
+
+# --- IDEs and editors -------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.claude/settings.local.json
+
+# --- OS files ---------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

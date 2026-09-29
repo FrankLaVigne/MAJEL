@@ -1,0 +1,19 @@
+# MAJEL - Docker Compose placeholder
+#
+# This file is intentionally empty of services.
+#
+# MAJEL is at a Day Zero stage. No control-plane services, databases,
+# queues, observability stacks, or agent frameworks have been selected.
+# Services will be added here only after the architecture decisions that
+# justify them have been recorded in docs/decisions/.
+#
+# Containers are the default deployment unit, but containers are not
+# trust boundaries. Workloads that need stronger isolation (separate VMs,
+# networks, or hosts) should not be combined here just for convenience.
+#
+# Never put credentials in this file. Use environment files that are
+# excluded by .gitignore, or a proper secrets mechanism.
+
+name: majel
+
+services: {}
