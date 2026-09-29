@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/majel-logo.png" alt="MAJEL: Multi-Agent Junction and Execution Layer" width="320">
+</p>
+
 # MAJEL
 
 **Multi-Agent Junction & Execution Layer**
@@ -194,6 +198,7 @@ MAJEL/
 ├── README.md
 ├── compose.yaml            # Placeholder; no services defined yet
 ├── docs/
+│   ├── assets/             # Project logo and other documentation images
 │   ├── architecture/       # Architecture documentation (index only for now)
 │   ├── experiments/        # Experiment write-ups and template guidance
 │   └── decisions/          # Architecture Decision Records (ADRs)
