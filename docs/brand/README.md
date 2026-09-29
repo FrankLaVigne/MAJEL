@@ -187,9 +187,16 @@ For Mermaid diagrams, this theme block applies the palette:
   "lineColor": "#7F93A8",
   "clusterBkg": "#0F243B",
   "clusterBorder": "#7F93A8",
-  "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif"
+  "titleColor": "#BDCFD8"
 }}}%%
+
+classDef endpoint fill:#0F243B,stroke:#BDCFD8,color:#FDFBF5
+classDef control fill:#2F6A99,stroke:#62D2F0,stroke-width:2px,color:#FDFBF5
+classDef agent fill:#0F243B,stroke:#4D86B5,stroke-width:2px,color:#FDFBF5
+classDef provider fill:#0F243B,stroke:#D5A067,stroke-width:2px,color:#FDFBF5
 ```
+
+The `classDef` lines go at the end of the diagram and are applied with `class NodeA,NodeB control`. The [README diagram](../../README.md#conceptual-architecture) is the working example. Don't set `fontFamily` in the theme block: in testing, a font list there made Mermaid fall back to a serif font.
 
 Test Mermaid diagrams in both GitHub light and dark mode before committing. A dark-themed diagram can look heavy on a light page.
 

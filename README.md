@@ -91,6 +91,15 @@ These principles are the current foundation of the project. They are expected to
 > **This diagram is conceptual.** It illustrates the intended separation of concerns. It is not a finalized implementation architecture, and none of these layers exist as working software yet.
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {
+  "primaryColor": "#0F243B",
+  "primaryTextColor": "#FDFBF5",
+  "primaryBorderColor": "#7F93A8",
+  "lineColor": "#7F93A8",
+  "clusterBkg": "#020610",
+  "clusterBorder": "#7F93A8",
+  "titleColor": "#BDCFD8"
+}}}%%
 flowchart TD
     User([User])
 
@@ -121,6 +130,16 @@ flowchart TD
     Personal --> Providers
     Work --> Providers
     Home --> Providers
+
+    classDef endpoint fill:#0F243B,stroke:#BDCFD8,color:#FDFBF5
+    classDef control fill:#2F6A99,stroke:#62D2F0,stroke-width:2px,color:#FDFBF5
+    classDef agent fill:#0F243B,stroke:#4D86B5,stroke-width:2px,color:#FDFBF5
+    classDef provider fill:#0F243B,stroke:#D5A067,stroke-width:2px,color:#FDFBF5
+
+    class User,Voice,Chat,Robot,API endpoint
+    class CP,CPR control
+    class Personal,Work,Home agent
+    class Providers provider
 ```
 
 ## Capabilities and Providers
