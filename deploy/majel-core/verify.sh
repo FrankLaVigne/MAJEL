@@ -46,8 +46,9 @@ fi
 if command -v docker >/dev/null 2>&1; then
   for plugin in compose buildx; do
     if version=$(docker "$plugin" version 2>&1); then
-      if [[ $plugin == compose && ! $version =~ version[[:space:]]+v?2\. ]]; then
-        report FAIL "Expected Compose v2: $version"
+      # Compose v1 was the legacy standalone tool; the plugin is v2 or later.
+      if [[ $plugin == compose ]] && ! { [[ $version =~ version[[:space:]]+v?([0-9]+)\. ]] && (( BASH_REMATCH[1] >= 2 )); }; then
+        report FAIL "Expected Compose v2 or later: $version"
       else
         report PASS "$version"
       fi

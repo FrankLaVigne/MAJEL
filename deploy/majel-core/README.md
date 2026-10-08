@@ -15,8 +15,8 @@ sudo bash deploy/majel-core/bootstrap.sh frank
 
 Bootstrap installs Git, curl, CA certificates, Python 3 and xz utilities;
 the newest Node.js LTS from official release metadata with npm and npx;
-and Docker Engine, containerd, Compose v2 and Buildx from Docker's official
-signed apt repository. Node archives are checked against the official SHA-256
+and Docker Engine, containerd, the Compose plugin (v2 or later) and Buildx
+from Docker's official signed apt repository. Node archives are checked against the official SHA-256
 manifest retrieved over HTTPS. Node lives under `/usr/local/lib/nodejs`, with
 links in `/usr/local/bin`. Ensure `/usr/local/bin` is in your PATH.
 
@@ -81,8 +81,8 @@ optional admin tools, an uncloned repository, local changes, detached HEAD or a
 missing origin do not fail the baseline.
 
 Checks cover Ubuntu version, architecture, required executable versions, Node's
-LTS designation, Compose v2, Buildx, Docker packages/repository/key, Docker service
-activity and startup enablement, local Docker access without sudo, `/opt/majel`,
+LTS designation, Compose v2 or later, Buildx, Docker packages/repository/key,
+Docker service activity and startup enablement, local Docker access without sudo, `/opt/majel`,
 and the selected repository's HEAD, branch, working tree and origin presence.
 Root execution warns that developer Docker permissions cannot be verified.
 
