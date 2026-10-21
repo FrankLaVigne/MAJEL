@@ -618,7 +618,11 @@ class Bridge:
         while True:
             audio, floor = self.listen(frames, floor)
             t0 = time.monotonic()
-            text = self.transcribe(audio)
+            try:
+                text = self.transcribe(audio)
+            except requests.RequestException as e:
+                self.backend_down("speech recognition", e, speak=False)  # can't tell if it was addressed
+                continue
             t_stt = time.monotonic() - t0
             if len(re.sub(r"[^a-zA-Z]", "", text)) < 2 or ONLY_NAME.fullmatch(text):
                 print(f"  (ignored: {text!r})")
@@ -642,7 +646,24 @@ class Bridge:
 
             print(f"you    ({audio.size / RATE:.1f}s, stt {t_stt:.2f}s): {text}")
             with self.turn:
-                self.respond(text, t0)
+                try:
+                    self.respond(text, t0)
+                except requests.RequestException as e:
+                    self.backend_down("a backend", e)
+
+    def backend_down(self, what, error, speak=True):
+        """A backend is unreachable (often the inference host restarting): stay connected and keep listening,
+        rather than exiting and making systemd cycle the robot through wake and sleep."""
+        now = time.monotonic()
+        if now - getattr(self, "_down_logged", 0) > 60:
+            print(f"  [{what} unreachable, still listening: {type(error).__name__}: {str(error)[:120]}]")
+            self._down_logged = now
+        if speak:
+            try:
+                self.announce("Sorry, I can't reach my servers right now.")
+            except requests.RequestException:
+                pass  # speech synthesis is down too; nothing to say it with
+        self.settle()
 
     # ---- one turn, from the mic or the console ----------------------------
     def respond(self, text, t0=None):
