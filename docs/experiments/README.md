@@ -46,4 +46,6 @@ These are proposed experiments. **None have been run yet.**
 
 ## Index
 
-*No experiments have been recorded yet.*
+| Experiment | Title | Status |
+|---|---|---|
+| [0001](0001-reachy-voice-loop.md) | Reachy Mini as a voice interface for a remotely hosted agent | Complete |

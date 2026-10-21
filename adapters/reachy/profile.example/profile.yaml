@@ -1,0 +1,28 @@
+# Example agent profile for the MAJEL Reachy adapter. A real profile is private: keep it
+# outside this repository, next to its persona, facts and peer credentials.
+# Relative paths are relative to this file.
+
+name: Robin
+# Spellings speech recognition produces for the name; any of them gets its attention.
+aliases: [robin, robyn]
+owner: Alex
+voice: af_heart            # text-to-speech voice; the console can override it
+persona: persona.md        # system prompt, optional YAML front matter
+facts: facts.md            # standing facts, one per line after a title line
+about: "I'm Robin, Alex's assistant, speaking to you through this little robot."
+# Names to bias speech recognition toward.
+stt_hint: "Robin, Alex, Reachy."
+
+# Optional: a peer agent with an OpenAI-compatible chat API that the agent may consult,
+# read-only. Its URL and key live in a private env file, never here.
+# peer:
+#   name: Sam
+#   pronouns: they/them
+#   env: peer.env            # contains PEER_URL=... and PEER_API_KEY=...
+#   url_var: PEER_URL
+#   key_var: PEER_API_KEY
+#   model: default
+#   can_read: "email, calendar and notes"
+#   # Requests matching these patterns go straight to the peer (small models often skip the tool).
+#   route: ['e-?mails?', inbox, calendar, schedule, 'meetings?']
+#   wait_lines: ["Sam's still looking.", "Nearly there."]

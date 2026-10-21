@@ -40,4 +40,6 @@ Each ADR should contain:
 
 ## Index
 
-*No ADRs have been recorded yet.*
+| ADR | Title | Status |
+|---|---|---|
+| [0001](0001-reachy-embodiment-adapter.md) | Reachy Mini embodiment adapter with a separate agent profile | Proposed |

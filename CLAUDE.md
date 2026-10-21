@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-MAJEL (Multi-Agent Junction & Execution Layer) is a **Day Zero scaffold**: an architectural thesis for a control plane that coordinates specialized AI agents without sharing credentials between them. There is no application code yet. There is no build, lint, or test tooling. `majel/`, `adapters/`, `deploy/docker/` and `tests/` contain only `.gitkeep`, and `compose.yaml` defines `services: {}` on purpose.
+MAJEL (Multi-Agent Junction & Execution Layer) is a **Day Zero scaffold**: an architectural thesis for a control plane that coordinates specialized AI agents without sharing credentials between them. The control plane itself has no code yet. There is no build, lint, or test tooling. `majel/`, `deploy/docker/` and `tests/` contain only `.gitkeep`, and `compose.yaml` defines `services: {}` on purpose.
+
+The one adapter so far is `adapters/reachy/` (experimental, per proposed ADR-0001): a Python voice bridge and console that give an agent a Reachy Mini body. It loads the agent's identity from a private profile outside the repo; keep it free of any agent's persona, names, addresses or credentials. See its README.
 
 Don't invent tooling, frameworks, services, or APIs that aren't here. Per `compose.yaml`, services and dependencies are added only after an ADR in `docs/decisions/` justifies them.
 
-The only executable code is the MAJEL-CORE host scripts in `deploy/majel-core/`. These target Ubuntu 24.04 (amd64/arm64) with systemd:
+Besides that adapter, the only executable code is the MAJEL-CORE host scripts in `deploy/majel-core/`. These target Ubuntu 24.04 (amd64/arm64) with systemd:
 
 ```bash
 sudo bash deploy/majel-core/bootstrap.sh [developer-user]   # provision: Node LTS, Docker CE, /opt/majel

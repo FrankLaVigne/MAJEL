@@ -1,0 +1,12 @@
+# Copy to ~/.config/systemd/user/<SERVICE>-console.service and adjust the paths.
+[Unit]
+Description=MAJEL Reachy adapter web console (port 8765)
+
+[Service]
+Environment=MAJEL_REACHY_CONFIG=%h/.config/my-agent/reachy.env
+ExecStart=%h/.local/share/majel-reachy/venv/bin/python -u /opt/majel/adapters/reachy/panel.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

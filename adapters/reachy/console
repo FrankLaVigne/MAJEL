@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Terminal console. No arguments: interactive. "console help" lists one-shot commands.
+here=$(dirname "$(readlink -f "$0")")
+exec "${MAJEL_REACHY_PYTHON:-python3}" "$here/console.py" "$@"

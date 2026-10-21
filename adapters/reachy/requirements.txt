@@ -1,0 +1,6 @@
+# Python dependencies. GStreamer, its GObject introspection typelibs and the
+# gst-plugins-rs webrtc plugin are system dependencies; see README.md.
+reachy-mini==1.11.0
+numpy
+PyYAML
+requests

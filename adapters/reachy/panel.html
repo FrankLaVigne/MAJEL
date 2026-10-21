@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{NAME}} Console</title>
+<style>
+:root {
+  --bg: #f6f5f2; --card: #ffffff; --ink: #1d1c1a; --muted: #6b6862; --line: #e3e0da;
+  --accent: #2f5d8a; --accent-ink: #ffffff; --good: #2e7d4f; --bad: #b3412f; --warn: #a86b12;
+  --field: #fbfaf8; --log: #f1efea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --card: #1f1f1d; --ink: #ecebe7; --muted: #9c9a94; --line: #34332f;
+    --accent: #7fb0e0; --accent-ink: #111; --good: #6fc794; --bad: #ee8b78; --warn: #e0b060;
+    --field: #262624; --log: #191918;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --card: #1f1f1d; --ink: #ecebe7; --muted: #9c9a94; --line: #34332f;
+  --accent: #7fb0e0; --accent-ink: #111; --good: #6fc794; --bad: #ee8b78; --warn: #e0b060;
+  --field: #262624; --log: #191918;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 20px 16px 110px; }
+header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.pill { padding: 3px 10px; border-radius: 99px; font-size: 13px; border: 1px solid var(--line); color: var(--muted); }
+.pill.good { color: var(--good); border-color: currentColor; }
+.pill.bad { color: var(--bad); border-color: currentColor; }
+.backends { color: var(--muted); font-size: 13px; width: 100%; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; }
+.row { display: grid; grid-template-columns: 210px 1fr; gap: 6px 16px; align-items: center; padding: 8px 0;
+  border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.row label { font-weight: 600; }
+.help { grid-column: 2; color: var(--muted); font-size: 13px; }
+.row.changed label::after { content: " •"; color: var(--warn); }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; } .help { grid-column: 1; } }
+select, input[type=text], input[type=number], textarea {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--field); color: var(--ink); font: inherit; min-width: 0; }
+.inline { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.inline > select, .inline > input[type=text] { flex: 1; }
+input[type=range] { flex: 1; accent-color: var(--accent); min-width: 0; }
+output { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
+button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--field); color: var(--ink); cursor: pointer; white-space: nowrap; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.talk { display: flex; gap: 8px; margin-top: 12px; }
+.talk input { flex: 1; }
+.switch { display: inline-flex; gap: 8px; align-items: center; }
+.switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+pre { background: var(--log); border-radius: 8px; padding: 10px 12px; margin: 0; max-height: 320px; overflow: auto;
+  font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.savebar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+  padding: 12px 16px; display: flex; justify-content: center; }
+.savebar .inner { max-width: 860px; width: 100%; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+#msg { flex: 1; color: var(--muted); font-size: 14px; min-width: 160px; }
+#msg.err { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>{{NAME}}</h1>
+    <span id="svc" class="pill">…</span>
+    <span id="mode" class="pill" hidden></span>
+    <div id="backends" class="backends">Checking backends…</div>
+  </header>
+
+  <section>
+    <h2>Controls</h2>
+    <div class="buttons">
+      <button id="power">Start</button>
+      <button data-act="restart">Restart</button>
+      <button id="sleepwake">Put to sleep</button>
+      <button data-act="rediscover">Recheck backends</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label for="vol">Speaker volume</label>
+      <div class="inline"><input id="vol" type="range" min="0" max="100" step="5"><output id="volout">–</output></div>
+      <div class="help">Applies right away; the robot plays a short test sound.</div>
+    </div>
+    <div class="talk">
+      <input id="talk" type="text" maxlength="1000" placeholder="Type something for {{NAME}}…">
+      <button data-talk="ask" class="primary">Ask</button>
+      <button data-talk="say">Say it</button>
+    </div>
+  </section>
+
+  <div id="groups"></div>
+
+  <section>
+    <h2>Activity</h2>
+    <pre id="log">…</pre>
+  </section>
+</main>
+
+<div class="savebar"><div class="inner">
+  <span id="msg">No unsaved changes.</span>
+  <button id="save" disabled>Save</button>
+  <button id="saverestart" class="primary" disabled>Save &amp; restart</button>
+</div></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let saved = {}, pending = {}, last = null;
+
+async function api(path, body) {
+  const opts = body ? { method: "POST", headers: { "Content-Type": "application/json", "X-Majel-Reachy": "1" },
+                        body: JSON.stringify(body) } : {};
+  const r = await fetch(path, opts);
+  if (r.status === 403) { note("Signed out: open the console link with its token again.", true); throw new Error("403"); }
+  return r.json();
+}
+function note(text, err) { const m = $("#msg"); m.textContent = text; m.classList.toggle("err", !!err); }
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  kids.flat().forEach((k) => k && e.append(k));
+  return e;
+}
+
+function change(key, value) {
+  if (String(value) === String(saved[key])) delete pending[key]; else pending[key] = String(value);
+  document.querySelectorAll(".row[data-key]").forEach((r) => r.classList.toggle("changed", r.dataset.key in pending));
+  const n = Object.keys(pending).length;
+  $("#save").disabled = $("#saverestart").disabled = !n;
+  note(n ? `${n} unsaved change${n > 1 ? "s" : ""}.` : "No unsaved changes.");
+}
+
+function control(s) {
+  const id = "f-" + s.key, on = (e) => change(s.key, e.target.value);
+  if (s.options) {
+    const sel = el("select", { id, onchange: on },
+      s.options.map(([v, label]) => el("option", { value: v, selected: v === s.value, text: label })));
+    if (s.kind !== "voice") return sel;
+    const preview = el("button", { type: "button", text: "Preview", onclick: async () => {
+      const speed = pending.TTS_SPEED ?? saved.TTS_SPEED;
+      note(`Previewing ${sel.value}…`);
+      const r = await api("/api/action", { action: "preview", voice: sel.value, speed: Number(speed) });
+      note(r.ok ? `Played ${sel.value}.` : (r.error || r.message), !r.ok);
+    }});
+    return el("div", { class: "inline" }, sel, preview);
+  }
+  if (s.kind === "toggle") {
+    const box = el("input", { id, type: "checkbox", checked: s.value === "1",
+      onchange: (e) => change(s.key, e.target.checked ? "1" : "0") });
+    return el("span", { class: "switch" }, box, el("span", { text: "On" }));
+  }
+  if (s.kind === "number") {
+    const out = el("output", { text: s.value });
+    const range = el("input", { id, type: "range", min: s.low, max: s.high, step: s.step, value: s.value,
+      oninput: (e) => { out.textContent = e.target.value; change(s.key, e.target.value); } });
+    return el("div", { class: "inline" }, range, out);
+  }
+  return el("input", { id, type: "text", value: s.value, spellcheck: "false", onchange: on });
+}
+
+function renderSettings(st) {
+  saved = {}; pending = {};
+  const groups = {};
+  for (const s of st.settings) { saved[s.key] = s.value; (groups[s.group] ||= []).push(s); }
+  $("#groups").replaceChildren(...Object.entries(groups).map(([g, items]) =>
+    el("section", {}, el("h2", { text: g }), items.map((s) =>
+      el("div", { class: "row", "data-key": s.key },
+        el("label", { for: "f-" + s.key, text: s.label }), control(s), el("div", { class: "help", text: s.help }))))));
+  change("__none__", undefined);
+}
+
+function renderLive(st) {
+  last = st;
+  const running = st.service === "active";
+  $("#svc").textContent = running ? "running" : st.service;
+  $("#svc").className = "pill " + (running ? "good" : "bad");
+  const mode = $("#mode");
+  mode.hidden = !st.agent;
+  if (st.agent) mode.textContent = st.agent.asleep ? "asleep" : "listening";
+  $("#power").textContent = running ? "Stop" : "Start";
+  $("#sleepwake").textContent = st.agent?.asleep ? "Wake up" : "Put to sleep";
+  $("#sleepwake").disabled = !st.agent;
+  document.querySelectorAll("[data-talk]").forEach((b) => (b.disabled = !st.agent));
+  $("#backends").textContent = st.backends.join(" · ");
+  if (document.activeElement !== $("#vol")) {
+    $("#vol").value = st.volume ?? 0; $("#volout").textContent = st.volume ?? "–"; $("#vol").disabled = st.volume == null;
+  }
+  const log = $("#log"), atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  log.textContent = st.log.join("\n") || "(nothing yet)";
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+
+async function load(rediscover) {
+  const st = await api("/api/state" + (rediscover ? "?rediscover=1" : ""));
+  renderSettings(st); renderLive(st);
+}
+async function poll() { try { renderLive(await api("/api/state")); } catch {} }
+
+async function act(body, busy) {
+  note(busy);
+  try {
+    const r = await api("/api/action", body);
+    note(r.message || r.error, !r.ok);
+  } catch (e) { if (e.message !== "403") note("Request failed.", true); }
+  poll();
+}
+
+$("#power").onclick = () => act({ action: last?.service === "active" ? "stop" : "start" }, "Working…");
+$("#sleepwake").onclick = () => act({ action: last?.agent?.asleep ? "wake" : "sleep" }, "Working…");
+document.querySelectorAll("[data-act]").forEach((b) => (b.onclick = async () => {
+  await act({ action: b.dataset.act }, b.dataset.act === "restart" ? "Restarting…" : "Rechecking…");
+  if (b.dataset.act === "rediscover") load(false);
+}));
+document.querySelectorAll("[data-talk]").forEach((b) => (b.onclick = () => {
+  const text = $("#talk").value.trim();
+  if (!text) return;
+  $("#talk").value = "";
+  act({ action: b.dataset.talk, text }, "{{NAME}} is talking…");
+}));
+$("#talk").addEventListener("keydown", (e) => { if (e.key === "Enter") document.querySelector("[data-talk=ask]").click(); });
+$("#vol").oninput = (e) => ($("#volout").textContent = e.target.value);
+$("#vol").onchange = (e) => act({ action: "volume", volume: Number(e.target.value) }, "Setting volume…");
+
+async function doSave(restart) {
+  note("Saving…");
+  const r = await api("/api/save", { updates: pending, restart });
+  if (!r.ok) return note(r.error, true);
+  await load(false);
+  note(r.message);
+}
+$("#save").onclick = () => doSave(false);
+$("#saverestart").onclick = () => doSave(true);
+window.addEventListener("beforeunload", (e) => { if (Object.keys(pending).length) e.preventDefault(); });
+
+load(false);
+setInterval(poll, 3000);
+</script>
+</body>
+</html>
