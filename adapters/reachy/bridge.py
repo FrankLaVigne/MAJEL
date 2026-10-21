@@ -663,7 +663,9 @@ class Bridge:
                 self.announce("Sorry, I can't reach my servers right now.")
             except requests.RequestException:
                 pass  # speech synthesis is down too; nothing to say it with
-        self.settle()
+        # No follow-up window: a failure isn't a conversation, so the next sound still needs the name.
+        self.window_until = 0.0
+        self.gestures.do("resting" if self.asleep else "idle")
 
     # ---- one turn, from the mic or the console ----------------------------
     def respond(self, text, t0=None):
