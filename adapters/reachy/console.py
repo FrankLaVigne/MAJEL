@@ -250,11 +250,11 @@ class Console:
         if kind == "setting":
             if item.kind == "toggle":
                 self.stage(item, "0" if self.shown(item) == "1" else "1")
-            elif item.kind in ("number", "url", "servers", "host"):
+            elif item.kind in ("number", "url", "search", "servers", "host"):
                 value = self.prompt(f"{item.label}" + (f" ({item.low:g}-{item.high:g})" if item.kind == "number" else ""),
                                     self.shown(item))
                 if value:
-                    if item.kind == "url":
+                    if item.kind in ("url", "search"):
                         self.msg = "Checking server…"
                         self.draw()
                     self.stage(item, value)

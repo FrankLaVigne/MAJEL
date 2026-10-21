@@ -9,6 +9,7 @@ Gives an agent a physical voice through a [Reachy Mini](https://github.com/polle
 - Listens continuously. It responds only when addressed by name, or within a short follow-up window after its last reply.
 - Streams the reply sentence by sentence, so speech starts before the language model has finished. In the experiment, replies began 0.9–1.7 s after the user stopped talking.
 - Understands a few spoken commands itself: sleep and wake, "introduce yourself" (which lists the commands), and "what do you see?" (one camera frame, sent to a vision model, never stored).
+- Optionally looks things up on the internet, read-only: search through a [SearXNG](https://docs.searxng.org) instance, and reading single public pages. Questions about news, weather, prices and other current facts are routed to search in code, because small models rarely choose the tool themselves.
 - Can consult one peer agent through an OpenAI-compatible chat API. Requests are framed as read-only lookups, which is an instruction rather than enforcement; see ADR-0001.
 - Follows faces with the robot's own on-board tracker, and gestures while listening, thinking and speaking.
 - Exits when the robot connection drops, so systemd can restart it.
@@ -19,6 +20,7 @@ Gives an agent a physical voice through a [Reachy Mini](https://github.com/polle
 | Path | Purpose |
 |---|---|
 | `bridge.py` | The voice loop, gestures, vision and the local control socket |
+| `web.py` | Read-only search and page reading, with the public-address guard |
 | `settings.py` | Deployment config, agent profile, the settings the consoles may change, backend discovery |
 | `console.py`, `console` | Terminal console and one-shot commands |
 | `panel.py`, `panel.html` | Web console |
@@ -87,6 +89,9 @@ Both consoles change the deployment config and restart the service, and both can
 
 - The web console can change where audio, transcripts and camera frames are sent. Its token grants full control of the adapter, so keep it private. Firewall port 8765 to trusted machines if you can.
 - A peer agent's key in the profile is a credential for that agent's API. Keep the peer's API LAN-only and restricted to the adapter host. The read-only limit on peer requests is only an instruction.
+- **One outside source per request.** Once a request has used the peer agent, web tools are unavailable for the rest of it, and once it has read web content, the peer is unavailable. This is enforced in code. It stops web pages from steering requests to an agent with more authority, and stops the peer's private answers from leaving through a search query or page URL. Across requests, earlier replies stay in the conversation history, so the separation isn't complete.
+- Page reading refuses anything that doesn't resolve to a public internet address, re-checking every redirect, so links can't reach the robot, the console or other agents on the LAN. A host that changes its DNS answer between the check and the request could get past this.
+- Search queries are the user's words, sent to SearXNG and from there to its upstream engines without cookies or accounts. Run SearXNG on the adapter host or LAN, not as a public instance.
 - With `LOG_OVERHEARD=1`, everything the microphone hears is written to the journal as text, including speech not addressed to the agent.
 
 ## Known limitations
@@ -95,3 +100,5 @@ Both consoles change the deployment config and restart the service, and both can
 - Half-duplex: you can't interrupt the agent while it's talking.
 - Turning the camera off discards the video track but still decodes it, which roughly halves the bridge's CPU use rather than removing it.
 - One profile per deployment, and English-only speech recognition settings.
+- Small models summarize search results unreliably: they mostly get the facts right, but can garble dates or add details the results don't contain.
+- With a 4,096-token context, a long persona leaves little room for web results. Results are capped (four search results, 1,500 characters per page), and older conversation turns are dropped from requests that use the web.

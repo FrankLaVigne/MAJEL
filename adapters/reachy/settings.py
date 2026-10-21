@@ -28,7 +28,7 @@ class Setting:
     key: str  # config key; model settings write <KEY>_URL and <KEY>_MODEL
     label: str
     help: str
-    kind: str  # model, vision, stt, voice, number, toggle, url, servers, host
+    kind: str  # model, vision, stt, voice, number, toggle, url, search, servers, host
     group: str
     default: str = ""
     low: float = 0.0
@@ -59,6 +59,8 @@ SETTINGS = [
             "Listening", "0.8", 0.4, 2.0, 0.1),
     Setting("FOLLOW_UP_S", "Follow-up window (s)", "How long after answering it listens without its name. "
             "0 means always say the name.", "number", "Listening", "20", 0, 60, 5),
+    Setting("WEB", "Internet lookups", "Read-only web search and page reading. Searches go to the search server; "
+            "pages are fetched from the public internet only.", "toggle", "Internet", "0"),
     Setting("LOG_OVERHEARD", "Log overheard speech", "Off logs only word counts for speech not addressed to it.",
             "toggle", "Privacy", "1"),
     Setting("MODEL_SERVERS", "Model servers", "Name=URL pairs, comma separated. Ollama or OpenAI-compatible "
@@ -66,6 +68,7 @@ SETTINGS = [
     Setting("STT_URL", "Speech recognition server", "OpenAI-compatible /v1 base. Microphone audio goes here.",
             "url", "Backends"),
     Setting("TTS_URL", "Voice server", "OpenAI-compatible /v1 base.", "url", "Backends"),
+    Setting("SEARCH_URL", "Search server", "SearXNG base URL with the JSON format enabled.", "search", "Backends"),
     Setting("REACHY_HOST", "Robot address", "IP or hostname of the Reachy Mini.", "host", "Backends"),
 ]
 BY_KEY = {s.key: s for s in SETTINGS}
@@ -318,6 +321,13 @@ def validate(s, value, choices, cfg):
         if not URL.match(value):
             raise ValueError(f"{s.label}: {value!r} isn't an http(s) URL")
         _get(f"{value.rstrip('/')}/models")  # must answer before the agent is pointed at it
+        return {s.key: value.rstrip("/")}
+    if s.kind == "search":
+        if not URL.match(value):
+            raise ValueError(f"{s.label}: {value!r} isn't an http(s) URL")
+        r = requests.get(f"{value.rstrip('/')}/search", params={"q": "test", "format": "json"}, timeout=10)
+        r.raise_for_status()
+        r.json()  # SearXNG returns HTML unless json is enabled in its settings
         return {s.key: value.rstrip("/")}
     if s.kind == "host":
         if not HOST.match(value):
