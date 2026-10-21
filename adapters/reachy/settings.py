@@ -1,8 +1,8 @@
-"""Shared by the bridge and both consoles: deployment config, the agent profile, and what each setting may be.
+"""Shared by the bridge and both consoles: deployment config, agent profile, server registry, and settings.
 
 The deployment config is an env-style file named by MAJEL_REACHY_CONFIG (default: config.env next to this file).
 The agent profile is a private directory named by PROFILE in that config; see profile.example/.
-Model, speech and voice choices come from what the configured servers report.
+Servers and which ones serve each capability live in the registry (backends.py), not here.
 """
 
 import json
@@ -17,35 +17,27 @@ from pathlib import Path
 import requests
 import yaml
 
+import backends as B
+
 HERE = Path(__file__).resolve().parent
 CONFIG = Path(os.environ.get("MAJEL_REACHY_CONFIG", HERE / "config.env")).expanduser()
-URL = re.compile(r"^https?://[A-Za-z0-9.-]+(:\d{1,5})?(/[A-Za-z0-9._~/-]*)?$")
 HOST = re.compile(r"^[A-Za-z0-9.-]{1,253}$")
 
 
 @dataclass
 class Setting:
-    key: str  # config key; model settings write <KEY>_URL and <KEY>_MODEL
+    key: str  # config key
     label: str
     help: str
-    kind: str  # model, vision, stt, voice, number, toggle, url, search, servers, host
+    kind: str  # voice, number, toggle, host
     group: str
     default: str = ""
     low: float = 0.0
     high: float = 0.0
     step: float = 1.0
-    optional: bool = False  # offer "off"
 
 
 SETTINGS = [
-    Setting("LLM", "Conversation model", "The language model for conversation. Small models answer fastest.",
-            "model", "Models"),
-    Setting("VISION", "Vision model", "Used for questions like \"what do you see?\"", "vision", "Models",
-            optional=True),
-    Setting("VISION_FALLBACK", "Vision fallback", "Tried when the vision model doesn't answer.", "vision", "Models",
-            optional=True),
-    Setting("STT_MODEL", "Speech recognition", "Smaller models are faster; larger ones are more accurate.", "stt",
-            "Models"),
     Setting("TTS_VOICE", "Voice", "Text-to-speech voice. Preview before saving.", "voice", "Voice"),
     Setting("TTS_SPEED", "Speaking speed", "1.0 is normal.", "number", "Voice", "1.0", 0.7, 1.4, 0.05),
     Setting("CAMERA", "Camera", "Off: no looking, no face tracking, and the video track is discarded.",
@@ -59,20 +51,13 @@ SETTINGS = [
             "Listening", "0.8", 0.4, 2.0, 0.1),
     Setting("FOLLOW_UP_S", "Follow-up window (s)", "How long after answering it listens without its name. "
             "0 means always say the name.", "number", "Listening", "20", 0, 60, 5),
-    Setting("WEB", "Internet lookups", "Read-only web search and page reading. Searches go to the search server; "
-            "pages are fetched from the public internet only.", "toggle", "Internet", "0"),
+    Setting("WEB", "Internet lookups", "Read-only web search and page reading, through the web search "
+            "servers. Pages are fetched from the public internet only.", "toggle", "Internet", "0"),
     Setting("LOG_OVERHEARD", "Log overheard speech", "Off logs only word counts for speech not addressed to it.",
             "toggle", "Privacy", "1"),
-    Setting("MODEL_SERVERS", "Model servers", "Name=URL pairs, comma separated. Ollama or OpenAI-compatible "
-            "(vLLM, llama.cpp…). Conversations and camera frames go here.", "servers", "Backends"),
-    Setting("STT_URL", "Speech recognition server", "OpenAI-compatible /v1 base. Microphone audio goes here.",
-            "url", "Backends"),
-    Setting("TTS_URL", "Voice server", "OpenAI-compatible /v1 base.", "url", "Backends"),
-    Setting("SEARCH_URL", "Search server", "SearXNG base URL with the JSON format enabled.", "search", "Backends"),
-    Setting("REACHY_HOST", "Robot address", "IP or hostname of the Reachy Mini.", "host", "Backends"),
+    Setting("REACHY_HOST", "Robot address", "IP or hostname of the Reachy Mini.", "host", "Robot"),
 ]
 BY_KEY = {s.key: s for s in SETTINGS}
-OFF = "off"
 
 
 # ---- deployment config --------------------------------------------------------
@@ -120,14 +105,24 @@ def control_socket(cfg):
     return Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"{service_name(cfg)}.sock"
 
 
-def servers(cfg):
-    """[(name, url)] from MODEL_SERVERS."""
-    out = []
-    for part in cfg.get("MODEL_SERVERS", "").split(","):
-        if "=" in part:
-            name, url = part.split("=", 1)
-            out.append((name.strip(), url.strip().rstrip("/")))
-    return out
+# ---- server registry ------------------------------------------------------------
+def registry_path(cfg):
+    return B.backends_path(cfg, CONFIG)
+
+
+def load_registry(cfg):
+    """The registry, created from older single-address settings the first time if there isn't one yet."""
+    p = registry_path(cfg)
+    if not p.exists():
+        data = B.migrate(cfg)
+        if data["servers"]:
+            B.save(p, data)
+        return data
+    return B.load(p)
+
+
+def secrets(cfg):
+    return B.read_secrets(cfg)
 
 
 # ---- the agent profile ----------------------------------------------------------
@@ -217,65 +212,18 @@ def agent_name(cfg):
         return "Agent"
 
 
-# ---- what the backends offer -------------------------------------------------
-def _get(url, timeout=3):
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    return r.json()
-
-
-def probe_server(url):
-    """[(model, takes_images)] from an Ollama or OpenAI-compatible server. Raises if unreachable."""
-    base = url.removesuffix("/v1")
-    try:
-        tags = _get(f"{base}/api/tags")["models"]
-    except Exception:
-        tags = None
-    if tags is not None:  # Ollama: it can say which models take images
-        out = []
-        for m in tags:
-            caps = requests.post(f"{base}/api/show", json={"model": m["name"]}, timeout=3).json()
-            caps = caps.get("capabilities", [])
-            if "completion" in caps:
-                out.append((m["name"], "vision" in caps))
-        return out
-    # OpenAI-compatible servers don't say whether a model takes images, so offer each for both.
-    return [(m["id"], True) for m in _get(f"{url}/models")["data"]]
-
-
-def discover(cfg=None):
-    """Ask each backend what it has. Returns ({kind: [(value, label)]}, [status lines])."""
-    cfg, status = cfg or read_config(), []
-    chat, vision = [], []
-    for name, url in servers(cfg):
-        try:
-            for model, images in probe_server(url):
-                choice = (f"{url}|{model}", f"{name} · {model}")
-                chat.append(choice)
-                if images:
-                    vision.append(choice)
-            status.append(f"{name}: online")
-        except Exception:
-            status.append(f"{name}: offline")
-    stt, voices = [], []
-    try:
-        stt = [(m["id"], m["id"]) for m in _get(f"{cfg['STT_URL']}/models")["data"]]
-        status.append("Speech recognition: online")
-    except Exception:
-        status.append("Speech recognition: offline")
-    try:
-        voices = [(v["id"], v["id"]) for v in _get(f"{cfg['TTS_URL']}/audio/voices")["voices"]]
-        status.append("Voice server: online")
-    except Exception:
-        status.append("Voice server: offline")
-    return {"model": chat, "vision": vision, "stt": stt, "voice": voices}, status
+# ---- choices for the remaining settings ------------------------------------------
+def voice_choices(cfg, probes):
+    """Voices offered by the voice servers serving text to speech, primary first."""
+    data, out = load_registry(cfg), []
+    for e in data["capabilities"].get("text_to_speech", []):
+        for v in probes.get(e["server"], {}).get("voices", []):
+            if v not in out:
+                out.append(v)
+    return out
 
 
 def current(s, cfg):
-    """The setting's value as the UIs show it ("url|model" for model settings)."""
-    if s.kind in ("model", "vision"):
-        url, model = cfg.get(f"{s.key}_URL", ""), cfg.get(f"{s.key}_MODEL", "")
-        return f"{url}|{model}" if url and model else OFF
     if s.kind == "voice":
         if cfg.get(s.key):
             return cfg[s.key]
@@ -286,26 +234,16 @@ def current(s, cfg):
     return cfg.get(s.key, s.default)
 
 
-def options(s, choices, cfg):
-    """The values a choice setting may take. The current value stays selectable even if its server is offline."""
-    opts = list(choices.get(s.kind, []))
+def options(s, cfg, probes):
+    """[(value, label)] for a choice setting; the current value stays selectable even if its server is offline."""
+    opts = [(v, v) for v in voice_choices(cfg, probes)] if s.kind == "voice" else []
     cur = current(s, cfg)
-    if s.optional:
-        opts.insert(0, (OFF, "Off"))
     if cur and cur not in [v for v, _ in opts]:
-        opts.insert(0, (cur, label_for(cur, cfg) + " (unavailable)"))
+        opts.insert(0, (cur, f"{cur} (unavailable)"))
     return opts
 
 
-def label_for(value, cfg):
-    if "|" in value:
-        url, model = value.split("|", 1)
-        name = next((n for n, u in servers(cfg) if u == url), url)
-        return f"{name} · {model}"
-    return value
-
-
-def validate(s, value, choices, cfg):
+def validate(s, value, cfg, probes=None):
     """Return the config updates for this setting, or raise ValueError."""
     value = value.strip()
     if s.kind == "number":
@@ -317,42 +255,26 @@ def validate(s, value, choices, cfg):
         if value not in ("0", "1"):
             raise ValueError(f"{s.label} must be on or off")
         return {s.key: value}
-    if s.kind == "url":
-        if not URL.match(value):
-            raise ValueError(f"{s.label}: {value!r} isn't an http(s) URL")
-        _get(f"{value.rstrip('/')}/models")  # must answer before the agent is pointed at it
-        return {s.key: value.rstrip("/")}
-    if s.kind == "search":
-        if not URL.match(value):
-            raise ValueError(f"{s.label}: {value!r} isn't an http(s) URL")
-        r = requests.get(f"{value.rstrip('/')}/search", params={"q": "test", "format": "json"}, timeout=10)
-        r.raise_for_status()
-        r.json()  # SearXNG returns HTML unless json is enabled in its settings
-        return {s.key: value.rstrip("/")}
     if s.kind == "host":
         if not HOST.match(value):
             raise ValueError(f"{s.label}: {value!r} isn't a hostname or IP")
         return {s.key: value}
-    if s.kind == "servers":
-        pairs = []
-        for part in [p for p in value.split(",") if p.strip()]:
-            name, _, url = part.partition("=")
-            name, url = name.strip(), url.strip().rstrip("/")
-            if not re.fullmatch(r"[A-Za-z0-9 ._-]{1,30}", name) or not URL.match(url):
-                raise ValueError(f"Model servers: {part.strip()!r} should look like Name=http://host:port/v1")
-            pairs.append(f"{name}={url}")
-        if not pairs:
-            raise ValueError("Model servers: list at least one")
-        return {s.key: ",".join(pairs)}  # unreachable servers are allowed: they just show as offline
-    if value not in [v for v, _ in options(s, choices, cfg)]:
-        raise ValueError(f"{value!r} isn't one of the choices for {s.label}")
-    if s.kind in ("model", "vision"):
-        url, model = ("", "") if value == OFF else value.split("|", 1)
-        return {f"{s.key}_URL": url, f"{s.key}_MODEL": model}
-    return {s.key: value}
+    if s.kind == "voice":
+        if probes is not None and value not in [v for v, _ in options(s, cfg, probes)]:
+            raise ValueError(f"{value!r} isn't a voice the voice servers offer")
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", value):
+            raise ValueError(f"{value!r} isn't a voice name")
+        return {s.key: value}
+    raise ValueError(f"unknown setting kind {s.kind}")
 
 
 # ---- live controls that don't need a restart --------------------------------
+def _get(url, timeout=3):
+    r = requests.get(url, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+
 def robot_volume(cfg, volume=None):
     """Read, or set (0-100), the robot's speaker volume. Setting it plays the robot's own test sound."""
     base = f"http://{cfg['REACHY_HOST']}:8000/api/volume"

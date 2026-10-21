@@ -1,0 +1,80 @@
+{
+  "servers": [
+    {
+      "name": "gpu-ollama",
+      "type": "ollama",
+      "url": "http://192.0.2.20:11434/v1"
+    },
+    {
+      "name": "gpu-vllm",
+      "type": "openai",
+      "url": "http://192.0.2.20:8001/v1"
+    },
+    {
+      "name": "hosted-llm",
+      "type": "openai",
+      "url": "https://llm.example.com/v1",
+      "key_env": "HOSTED_LLM_API_KEY"
+    },
+    {
+      "name": "gpu-speech",
+      "type": "speech",
+      "url": "http://192.0.2.20:8000/v1"
+    },
+    {
+      "name": "gpu-voice",
+      "type": "voice",
+      "url": "http://192.0.2.20:8880/v1"
+    },
+    {
+      "name": "local-searxng",
+      "type": "search",
+      "url": "http://127.0.0.1:8888"
+    }
+  ],
+  "capabilities": {
+    "speech_to_text": [
+      {
+        "server": "gpu-speech",
+        "model": "Systran/faster-whisper-base.en"
+      }
+    ],
+    "text_generation": [
+      {
+        "server": "gpu-ollama",
+        "model": "qwen3:4b-instruct-2507-q4_K_M"
+      },
+      {
+        "server": "hosted-llm",
+        "model": "example-model"
+      }
+    ],
+    "tool_answers": [
+      {
+        "server": "gpu-ollama",
+        "model": "qwen3:8b"
+      }
+    ],
+    "vision": [
+      {
+        "server": "gpu-vllm",
+        "model": "Qwen/Qwen2.5-VL-7B-Instruct"
+      },
+      {
+        "server": "gpu-ollama",
+        "model": "qwen2.5vl:7b"
+      }
+    ],
+    "text_to_speech": [
+      {
+        "server": "gpu-voice",
+        "model": "kokoro"
+      }
+    ],
+    "web_search": [
+      {
+        "server": "local-searxng"
+      }
+    ]
+  }
+}

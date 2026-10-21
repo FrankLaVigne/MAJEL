@@ -60,6 +60,22 @@ button:disabled { opacity: 0.5; cursor: default; }
 .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
 pre { background: var(--log); border-radius: 8px; padding: 10px 12px; margin: 0; max-height: 320px; overflow: auto;
   font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.srv { display: grid; grid-template-columns: 1fr 1.1fr 2fr 1.2fr auto; gap: 8px; align-items: center;
+  padding: 8px 0; border-top: 1px solid var(--line); }
+.srv:first-of-type { border-top: 0; }
+.srv.head { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0; }
+.srv .acts { display: flex; gap: 6px; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+.dot.on { background: var(--good); } .dot.off { background: var(--bad); }
+.cap { padding: 10px 0; border-top: 1px solid var(--line); }
+.cap:first-of-type { border-top: 0; }
+.cap h3 { font-size: 15px; margin: 0 0 6px; }
+.chain { display: flex; gap: 6px; align-items: center; margin: 6px 0; }
+.chain .rank { width: 4.5em; color: var(--muted); font-size: 13px; flex: none; }
+.chain select { flex: 1; }
+.chain button, .srv button { padding: 6px 10px; }
+.subtle { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+@media (max-width: 700px) { .srv { grid-template-columns: 1fr 1fr; } .srv.head { display: none; } }
 .savebar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
   padding: 12px 16px; display: flex; justify-content: center; }
 .savebar .inner { max-width: 860px; width: 100%; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -96,6 +112,20 @@ pre { background: var(--log); border-radius: 8px; padding: 10px 12px; margin: 0;
     </div>
   </section>
 
+  <section>
+    <h2>Servers</h2>
+    <p class="subtle">Every machine or service the agent can use. Save, then Recheck backends to load a new server's models.
+      For an API key, name an environment variable here and put the key in the SECRETS file, never on this page.</p>
+    <div id="servers"></div>
+    <div class="buttons" style="margin-top:10px"><button id="addserver" type="button">Add server</button></div>
+  </section>
+
+  <section>
+    <h2>Capabilities</h2>
+    <p class="subtle">Each one tries its servers in order and moves to the next when one is down.</p>
+    <div id="caps"></div>
+  </section>
+
   <div id="groups"></div>
 
   <section>
@@ -113,6 +143,7 @@ pre { background: var(--log); border-radius: 8px; padding: 10px 12px; margin: 0;
 <script>
 const $ = (s) => document.querySelector(s);
 let saved = {}, pending = {}, last = null;
+let reg = null, regView = null, regDirty = false;
 
 async function api(path, body) {
   const opts = body ? { method: "POST", headers: { "Content-Type": "application/json", "X-Majel-Reachy": "1" },
@@ -136,7 +167,7 @@ function el(tag, attrs = {}, ...kids) {
 function change(key, value) {
   if (String(value) === String(saved[key])) delete pending[key]; else pending[key] = String(value);
   document.querySelectorAll(".row[data-key]").forEach((r) => r.classList.toggle("changed", r.dataset.key in pending));
-  const n = Object.keys(pending).length;
+  const n = Object.keys(pending).length + (regDirty ? 1 : 0);
   $("#save").disabled = $("#saverestart").disabled = !n;
   note(n ? `${n} unsaved change${n > 1 ? "s" : ""}.` : "No unsaved changes.");
 }
@@ -180,6 +211,80 @@ function renderSettings(st) {
   change("__none__", undefined);
 }
 
+// ---- servers and capabilities ----
+function regChanged() { regDirty = true; change("__none__", undefined); }
+
+function renderRegistry(view) {
+  regView = view;
+  reg = { servers: view.servers.map(({ name, type, url, key_env }) => ({ name, type, url, key_env: key_env || "" })),
+          capabilities: Object.fromEntries(Object.entries(view.capabilities).map(([c, v]) => [c, v.entries.map((e) => ({ ...e }))])) };
+  regDirty = false;
+  drawServers(); drawCaps();
+}
+
+function drawServers() {
+  const head = el("div", { class: "srv head" }, ["Name", "Type", "URL", "API key variable", ""].map((t) => el("span", { text: t })));
+  const rows = reg.servers.map((srv, i) => {
+    const known = regView.servers.find((x) => x.name === srv.name);
+    const dot = el("span", { class: "dot " + (known ? (known.online ? "on" : "off") : ""),
+                             title: known ? (known.online ? "online" : known.error || "offline") : "not saved yet" });
+    const field = (key, attrs = {}) => el("input", { type: "text", value: srv[key] || "", spellcheck: "false", ...attrs,
+      onchange: (e) => { srv[key] = e.target.value.trim(); regChanged(); if (key === "name") drawCaps(); } });
+    const type = el("select", { onchange: (e) => { srv.type = e.target.value; regChanged(); drawCaps(); } },
+      Object.entries(regView.types).map(([t, label]) => el("option", { value: t, selected: t === srv.type, text: t, title: label })));
+    const test = el("button", { type: "button", text: "Test", onclick: async () => {
+      note(`Testing ${srv.name || "server"}…`);
+      const r = await api("/api/action", { action: "test_server", server: srv });
+      note(`${srv.name}: ${r.message || r.error}`, !r.ok);
+    }});
+    const del = el("button", { type: "button", text: "Remove", onclick: () => {
+      reg.servers.splice(i, 1);
+      for (const c of Object.keys(reg.capabilities)) reg.capabilities[c] = reg.capabilities[c].filter((e) => e.server !== srv.name);
+      regChanged(); drawServers(); drawCaps();
+    }});
+    return el("div", { class: "srv" }, el("span", { class: "inline" }, dot, field("name", { placeholder: "name" })), type,
+      field("url", { placeholder: "http://host:port/v1" }), field("key_env", { placeholder: "none" }),
+      el("span", { class: "acts" }, test, del));
+  });
+  $("#servers").replaceChildren(head, ...rows);
+}
+
+function drawCaps() {
+  $("#caps").replaceChildren(...Object.entries(regView.capabilities).map(([cap, spec]) => {
+    const entries = reg.capabilities[cap];
+    const usable = reg.servers.filter((x) => spec.types.includes(x.type)).map((x) => x.name);
+    // Options: what online servers reported, plus anything already chosen (it may be offline right now).
+    let opts = spec.choices.filter(([srv]) => usable.includes(srv));
+    if (!spec.model) opts = usable.map((n) => [n, ""]);
+    for (const e of entries) if (!opts.some(([s, m]) => s === e.server && m === (e.model || ""))) opts.push([e.server, e.model || "", true]);
+    const label = ([srv, model, missing]) => (model ? `${srv} · ${model}` : srv) + (missing ? " (unavailable)" : "");
+    const rows = entries.map((e, i) => {
+      const sel = el("select", { onchange: (ev) => {
+          const [srv, model] = JSON.parse(ev.target.value); entries[i] = spec.model ? { server: srv, model } : { server: srv }; regChanged();
+        } }, opts.map((o) => el("option", { value: JSON.stringify([o[0], o[1]]), text: label(o),
+                                             selected: o[0] === e.server && o[1] === (e.model || "") })));
+      const move = (d) => () => { const j = i + d; if (j < 0 || j >= entries.length) return;
+        [entries[i], entries[j]] = [entries[j], entries[i]]; regChanged(); drawCaps(); };
+      return el("div", { class: "chain" }, el("span", { class: "rank", text: i ? `then ${i + 1}` : "first" }), sel,
+        el("button", { type: "button", text: "↑", title: "Try earlier", onclick: move(-1), disabled: i === 0 }),
+        el("button", { type: "button", text: "↓", title: "Try later", onclick: move(1), disabled: i === entries.length - 1 }),
+        el("button", { type: "button", text: "✕", title: "Remove", onclick: () => { entries.splice(i, 1); regChanged(); drawCaps(); } }));
+    });
+    const add = el("button", { type: "button", text: entries.length ? "Add fallback" : "Add server", disabled: !opts.length,
+      onclick: () => { const [srv, model] = opts[0]; entries.push(spec.model ? { server: srv, model } : { server: srv });
+                       regChanged(); drawCaps(); } });
+    const hint = opts.length ? "" : `No ${spec.types.join(" or ")} server is registered and online.`;
+    return el("div", { class: "cap" }, el("h3", { text: spec.label }), rows,
+      entries.length ? null : el("p", { class: "subtle", text: "Off: nothing serves this." }),
+      el("div", { class: "buttons" }, add, hint ? el("span", { class: "subtle", text: hint }) : null));
+  }));
+}
+
+$("#addserver").onclick = () => {
+  reg.servers.push({ name: "", type: "openai", url: "", key_env: "" });
+  regChanged(); drawServers();
+};
+
 function renderLive(st) {
   last = st;
   const running = st.service === "active";
@@ -203,7 +308,7 @@ function renderLive(st) {
 
 async function load(rediscover) {
   const st = await api("/api/state" + (rediscover ? "?rediscover=1" : ""));
-  renderSettings(st); renderLive(st);
+  renderSettings(st); renderRegistry(st.registry); renderLive(st);
 }
 async function poll() { try { renderLive(await api("/api/state")); } catch {} }
 
@@ -234,14 +339,23 @@ $("#vol").onchange = (e) => act({ action: "volume", volume: Number(e.target.valu
 
 async function doSave(restart) {
   note("Saving…");
-  const r = await api("/api/save", { updates: pending, restart });
-  if (!r.ok) return note(r.error, true);
+  const settingsToo = Object.keys(pending).length > 0;
+  let r = { ok: true };
+  if (regDirty) {
+    r = await api("/api/registry", { registry: reg, restart: restart && !settingsToo });
+    if (!r.ok) return note(r.error, true);
+    regDirty = false;
+  }
+  if (settingsToo) {
+    r = await api("/api/save", { updates: pending, restart });
+    if (!r.ok) return note(r.error, true);
+  }
   await load(false);
   note(r.message);
 }
 $("#save").onclick = () => doSave(false);
 $("#saverestart").onclick = () => doSave(true);
-window.addEventListener("beforeunload", (e) => { if (Object.keys(pending).length) e.preventDefault(); });
+window.addEventListener("beforeunload", (e) => { if (Object.keys(pending).length || regDirty) e.preventDefault(); });
 
 load(false);
 setInterval(poll, 3000);
