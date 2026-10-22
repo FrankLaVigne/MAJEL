@@ -43,7 +43,9 @@ SETTINGS = [
     Setting("CAMERA", "Camera", "Off: no looking, no face tracking, and the video track is discarded.",
             "toggle", "Camera", "1"),
     Setting("FACE_TRACKING_WEIGHT", "Face tracking", "0 is off, 1 lets tracking fully own the head.", "number",
-            "Camera", "0.8", 0, 1, 0.1),
+            "Motion", "0.8", 0, 1, 0.1),
+    Setting("STILL_WHEN_IDLE", "Still between conversations", "On: no face tracking or gestures until someone "
+            "says the name. Both stop again when the follow-up window closes.", "toggle", "Motion", "1"),
     Setting("MIC_START_DB", "Mic threshold (dB)", "How far above background noise counts as speech. "
             "Raise it if the agent reacts to noise; lower it if it misses you.", "number", "Listening", "10",
             6, 20, 1),

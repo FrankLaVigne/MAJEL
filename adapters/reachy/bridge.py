@@ -62,6 +62,8 @@ MIC_TIMEOUT_S = 10.0  # no audio at all for this long means the robot connection
 HISTORY_TURNS = 6
 FOLLOW_UP_S = setting("FOLLOW_UP_S", 20.0)  # after a reply, listen this long without needing the name
 CAMERA_ON = CFG.get("CAMERA", "1") == "1"
+# Between conversations, hold still: no face tracking and no gestures until addressed by name.
+STILL_WHEN_IDLE = CFG.get("STILL_WHEN_IDLE", "1") == "1"
 WEB_ON = CFG.get("WEB", "0") == "1" and ROUTER.configured("web_search")
 MAX_TOOL_ROUNDS = 3  # e.g. search, read a result, then answer
 # A reply that promises a lookup instead of giving an answer ("Let me check the details.").
@@ -252,9 +254,9 @@ class Gestures(threading.Thread):
             except Exception as e:  # never let a gesture kill the bridge
                 print(f"  [gesture {name} failed: {e}]")
 
-    def do(self, name):
+    def do(self, name, force=False):
         # Re-sending the pose it already holds makes the motors click, so skip repeats.
-        if name == self.last and name in ("idle", "resting"):
+        if not force and name == self.last and name in ("idle", "resting"):
             return
         self.last = name
         try:
@@ -305,6 +307,7 @@ class Bridge:
         self.mute_until = 0.0
         self.window_until = 0.0  # follow-ups without the name are accepted until then
         self.asleep = False  # after "stop listening", only "<name>, wake up" gets through
+        self.engaged = False  # in a conversation: face tracking on, gestures allowed
         self.http = requests.Session()
         self.turn = threading.Lock()  # one request at a time, whether it came from the mic or the console
 
@@ -350,6 +353,7 @@ class Bridge:
                 continue
             level = db(frame)
             if not speech:
+                self.check_idle()
                 preroll = (preroll + [frame])[-int(PREROLL_S * RATE / FRAME):]
                 recent = (recent + [level])[-int(1.0 * RATE / FRAME):]
                 loud = loud + 1 if level > floor + START_DB else 0
@@ -358,7 +362,7 @@ class Bridge:
                     # Background right before speaking: median of the last second, minus the onset.
                     before = recent[:-START_FRAMES]
                     base = max(floor, float(np.median(before))) if before else floor
-                    if not self.asleep:
+                    if self.engaged and not self.asleep:
                         self.gestures.do("listening")
                 elif level < floor + KEEP_DB:
                     floor = 0.98 * floor + 0.02 * level  # track slow changes in room noise
@@ -628,6 +632,20 @@ class Bridge:
                 print(f"  [look via {server['name']} {model} failed: {type(e).__name__}: {str(e)[:120]}]")
         return "I tried to look, but my vision isn't working right now."
 
+    def engage(self):
+        """A conversation started: follow faces and gesture."""
+        if not self.engaged:
+            self.engaged = True
+            self.track_faces(True)
+
+    def check_idle(self):
+        """With STILL_WHEN_IDLE, stop tracking and gestures once the follow-up window has closed."""
+        if (STILL_WHEN_IDLE and self.engaged and not self.asleep and time.monotonic() >= self.window_until
+                and not self.turn.locked()):
+            self.engaged = False
+            self.track_faces(False)
+            self.gestures.do("idle", force=True)  # back to neutral from wherever tracking left the head
+
     def track_faces(self, on):
         weight = setting("FACE_TRACKING_WEIGHT", 0.0)
         if weight <= 0 or not CAMERA_ON:
@@ -644,7 +662,8 @@ class Bridge:
         floor = self.calibrate(frames)
         print(f"noise floor {floor:.1f} dBFS; say \"{NAME}\" to talk (Ctrl+C to stop)")
         self.gestures.start()
-        self.track_faces(True)
+        if not STILL_WHEN_IDLE:
+            self.engage()
         Control(self).start()
         while True:
             audio, floor = self.listen(frames, floor)
@@ -704,6 +723,7 @@ class Bridge:
         t0 = t0 or time.monotonic()
         if SLEEP.search(text):
             return self.sleep()
+        self.engage()
         if INTRO.search(text):
             self.gestures.do("speaking")
             return self.speak_lines(intro_lines(self.peer and self.peer.peer))
@@ -748,14 +768,14 @@ class Bridge:
 
     def sleep(self):
         self.announce("Very well. Going quiet.")
-        self.asleep, self.window_until = True, 0.0
+        self.asleep, self.window_until, self.engaged = True, 0.0, False
         self.track_faces(False)
         self.gestures.do("resting")
         return "Very well. Going quiet."
 
     def wake(self):
         self.asleep = False
-        self.track_faces(True)
+        self.engage()
         self.gestures.do("idle")
         self.announce("I'm listening.")
         self.window_until = time.monotonic() + FOLLOW_UP_S

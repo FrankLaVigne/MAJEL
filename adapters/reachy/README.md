@@ -11,7 +11,7 @@ Gives an agent a physical voice through a [Reachy Mini](https://github.com/polle
 - Understands a few spoken commands itself: sleep and wake, "introduce yourself" (which lists the commands), and "what do you see?" (one camera frame, sent to a vision model, never stored).
 - Optionally looks things up on the internet, read-only: search through a [SearXNG](https://docs.searxng.org) instance, and reading single public pages. Questions about news, weather, prices and other current facts are routed to search in code, because small models rarely choose the tool themselves.
 - Can consult one peer agent through an OpenAI-compatible chat API. Requests are framed as read-only lookups, which is an instruction rather than enforcement; see ADR-0001.
-- Follows faces with the robot's own on-board tracker, and gestures while listening, thinking and speaking.
+- Follows faces with the robot's own on-board tracker, and gestures while listening, thinking and speaking. By default it does both only during a conversation, from being addressed by name until the follow-up window closes, and holds still otherwise (`STILL_WHEN_IDLE`).
 - Routes each capability through an ordered list of servers and moves to the next when one is down (see [Servers and capabilities](#servers-and-capabilities)).
 - Exits when the robot connection drops, so systemd can restart it. It keeps running, and keeps listening, when backend servers are unreachable.
 - Includes a web console and a terminal console for settings and live control.
